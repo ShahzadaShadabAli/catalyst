@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// The website never talks to Firestore from the browser.
+// Every read and write goes through the Next.js server using the Admin SDK,
+// which bypasses these rules after checking the admin session itself.
+// So the browser gets no access at all: not to content, not to applications.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
