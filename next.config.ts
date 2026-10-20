@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
-const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "true";
 
 // Content Security Policy. Next.js needs inline scripts for hydration unless every
 // page is rendered per-request with a nonce, which would turn off static caching.
@@ -13,10 +12,7 @@ const csp = [
   "font-src 'self' data:",
   [
     "connect-src 'self'",
-    "https://identitytoolkit.googleapis.com",
-    "https://securetoken.googleapis.com",
     "https://api.cloudinary.com",
-    useEmulators ? "http://127.0.0.1:9099 http://localhost:9099" : "",
     isDev ? "ws: wss:" : "",
   ]
     .filter(Boolean)

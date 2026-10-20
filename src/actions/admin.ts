@@ -29,7 +29,7 @@ async function admin(): Promise<AdminSession | null> {
   }
 }
 
-const stamp = (s: AdminSession) => ({ updatedAt: FieldValue.serverTimestamp(), updatedBy: s.email || s.uid });
+const stamp = (s: AdminSession) => ({ updatedAt: FieldValue.serverTimestamp(), updatedBy: s.username });
 
 /** Would making `parentId` the parent of `id` create a loop? */
 async function createsCycle(id: string | null, parentId: string | null): Promise<boolean> {

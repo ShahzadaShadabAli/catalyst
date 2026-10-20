@@ -1,8 +1,10 @@
 # Setting up Catalyst Collective
 
-This guide takes you from "code on my computer" to "live website with a working admin". It takes about 30–45 minutes the first time.
+This guide takes you from "code on my computer" to "live website with a working admin". It takes about 30 minutes the first time.
 
-You'll need free accounts on **Firebase** (database + logins), **Cloudinary** (photos) and **Vercel** (hosting).
+You'll need free accounts on **Firebase** (the database), **Cloudinary** (photos) and **Vercel** (hosting).
+
+> On Windows PowerShell, if `npm` says "running scripts is disabled", type `npm.cmd` instead of `npm` in every command below.
 
 ---
 
@@ -12,7 +14,7 @@ You'll need free accounts on **Firebase** (database + logins), **Cloudinary** (p
 npm install
 ```
 
-In one terminal, start the local Firebase emulators (a fake Firebase that runs on your computer):
+In one terminal, start the local database emulator (a fake Firestore that runs on your computer):
 
 ```bash
 npm run emulators
@@ -30,7 +32,7 @@ Then start the site:
 npm run dev
 ```
 
-Open http://localhost:3000. The admin is at http://localhost:3000/admin. The test login email and password are in `.env.local` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). They only work on your computer.
+Open http://localhost:3000. The admin is at http://localhost:3000/admin. Sign in with username `admin` and the password in `.env.local` (`SEED_ADMIN_PASSWORD`). It only works on your computer.
 
 > The emulator forgets everything when you stop it. Run `npm run seed` again after restarting it.
 
@@ -38,27 +40,26 @@ Open http://localhost:3000. The admin is at http://localhost:3000/admin. The tes
 
 ## 2. Create the Firebase project
 
-1. Go to https://console.firebase.google.com → **Add project** → name it (e.g. `catalyst-collective`). Google Analytics is optional.
-2. **Build → Authentication → Get started → Email/Password → Enable** (leave "Email link" off).
-3. **Authentication → Settings**:
-   - **User actions**: untick **Enable create (sign-up)** so nobody can make an account on their own.
-   - Make sure **Email enumeration protection** is on.
-4. **Build → Firestore Database → Create database** → choose a location close to Pakistan (e.g. `asia-south1` Mumbai) → **Production mode**.
-5. **Project settings (gear) → General → Your apps → Web (`</>`)** → register an app → copy the `apiKey`, `authDomain`, `projectId`, `appId`.
-6. **Project settings → Service accounts → Generate new private key**. A JSON file downloads. **Keep it secret. Never commit it, email it or post it.**
+1. Go to https://console.firebase.google.com → **Add project** → name it. Google Analytics is optional.
+2. **Build → Firestore Database → Create database** → choose a location close to Pakistan (e.g. `asia-south1` Mumbai) → **Production mode**.
+3. **Project settings (gear) → Service accounts → Generate new private key**. A JSON file downloads. **Keep it secret. Never commit it, email it or post it.**
+
+That's all. You don't need Firebase Authentication or a "web app": logins are handled by the site itself (step 5).
 
 ### Deploy the security rules
 
-The rules block all direct browser access to the database (the website's server does all reading and writing):
+The rules block all direct browser access to the database (the website's server does all reading and writing). New production-mode databases already block everything, but deploying keeps them in sync with the code:
 
 ```bash
 firebase login
 firebase deploy --only firestore:rules,firestore:indexes --project YOUR_PROJECT_ID
 ```
 
-### Optional: auto-clean rate-limit records
+### Optional: auto-clean old records
 
-Firestore → **TTL policies** (under Indexes) → **Create policy** → collection `rateLimits`, field `expireAt`.
+Firestore → **TTL policies** → **Create policy**, twice:
+- collection `rateLimits`, field `expireAt`
+- collection `adminSessions`, field `expireAt`
 
 ---
 
@@ -72,35 +73,40 @@ Firestore → **TTL policies** (under Indexes) → **Create policy** → collect
 
 ## 4. Fill in your environment variables
 
-Copy `.env.example` to `.env.local` (for local use against the real project) and fill it in:
+Copy `.env.example` to **`.env.local`** and fill in `.env.local` (never `.env.example`, which goes to GitHub):
 
 | Variable | Where it comes from |
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | Your final web address, e.g. `https://catalystcollective.org` |
-| `NEXT_PUBLIC_FIREBASE_*` | Step 2.5 |
-| `FIREBASE_PROJECT_ID` | Same as the project id |
-| `FIREBASE_CLIENT_EMAIL` | `client_email` in the service-account JSON |
-| `FIREBASE_PRIVATE_KEY` | `private_key` in the JSON, on one line, keeping the `\n`s, wrapped in quotes |
+| `FIREBASE_PROJECT_ID` | `project_id` in the service-account JSON |
+| `FIREBASE_CLIENT_EMAIL` | `client_email` in the JSON, copied exactly |
+| `FIREBASE_PRIVATE_KEY` | `private_key` in the JSON, in double quotes |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Step 3 |
 | `CLOUDINARY_FOLDER` | Any folder name, e.g. `catalyst-collective` |
 | `RATE_LIMIT_SALT` | Run `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
-**Remove** `NEXT_PUBLIC_USE_EMULATORS`, `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST` when you point at the real project.
+Remove or comment out `FIRESTORE_EMULATOR_HOST` when you point at the real project.
 
 ---
 
 ## 5. Create the admin logins
 
-1. Firebase console → **Authentication → Users → Add user** → enter the person's email and a strong password (12+ characters).
-2. Give them admin rights (from this folder, with `.env.local` pointing at the real project):
+Admins sign in at `/admin` with a **username and password**. They're stored in the `admins` table in your database, with the password saved only as a secure hash.
+
+1. Add a line to `.env.local` with the password you want: `ADMIN_PASSWORD=your-password-here` (12+ characters).
+2. Run, with the username you want:
 
 ```bash
-npm run set-admin -- person@example.com
+npm run create-admin -- qarnia
 ```
 
-To remove someone's access: `npm run set-admin -- person@example.com --revoke`. This also signs them out everywhere.
+3. **Delete the `ADMIN_PASSWORD` line** from `.env.local`.
+4. Sign in at `/admin`.
 
-Only people with admin rights can sign in to `/admin`. Anyone else is refused, even if they have a Firebase account.
+(If you leave out `ADMIN_PASSWORD`, the command asks you to type the password instead, hidden.)
+
+- **Forgot the password, or want to change it?** Do the same again. It replaces the password and signs that admin out everywhere.
+- **Remove someone:** `npm run remove-admin -- qarnia`
 
 ### Optional: start with the sample content
 
@@ -116,19 +122,20 @@ This only fills sections that are empty. Every sample item is marked "(sample)",
 
 1. Put this folder in a GitHub repository (private is fine). `.gitignore` already keeps secrets out.
 2. https://vercel.com → **Add New → Project** → import the repository.
-3. **Settings → Environment Variables**: add every variable from step 4 (not the emulator ones).
+3. **Settings → Environment Variables**: add every variable from step 4 (not `ADMIN_PASSWORD`, `SEED_ADMIN_PASSWORD` or the emulator one).
 4. **Deploy**. Then add your domain under **Settings → Domains** and update `NEXT_PUBLIC_SITE_URL`.
 
 ---
 
 ## How the security works (short version)
 
-- **Logins**: Firebase Auth checks the password. The server then issues a 5-day, `httpOnly`, `Secure`, `SameSite=Strict` session cookie, and only to accounts with the `admin` claim who signed in within the last 5 minutes. Signing out revokes the session everywhere.
-- **Every admin page, save and upload** re-checks that cookie with Firebase, including revocation. The `/admin` redirect in `src/proxy.ts` is only a first check.
-- **Database**: Firestore rules deny all browser access. Only the server (Admin SDK) reads and writes, after checking the session.
+- **Logins**: usernames and password hashes live in the `admins` table. Passwords are hashed with scrypt (salted, deliberately slow), never stored as plain text.
+- **Sessions**: a successful login gets a random token in a 5-day `httpOnly`, `Secure`, `SameSite=Strict` cookie. The database stores only a hash of that token. Signing out deletes it. Changing a password or removing an admin ends all their sessions.
+- **Every admin page, save and upload** re-checks the session against the database. The `/admin` redirect in `src/proxy.ts` is only a first check.
+- **Login endpoint**: at most 10 tries per 15 minutes per visitor and 20 per username, same-origin requests only, the same generic error for a wrong username or a wrong password, and equal timing for both.
+- **Database**: Firestore rules deny all browser access. Only the server reads and writes, after checking the session.
 - **Validation**: every form is checked on the server with Zod (types, lengths, formats), whatever the browser sends.
 - **Join form**: a hidden bot trap, a minimum fill time, and a limit of 3 applications per hour per visitor. Visitor IPs are stored only as salted one-way hashes.
-- **Login endpoint**: at most 10 tries per 15 minutes per visitor, same-origin requests only, and generic error messages that don't reveal which emails exist.
 - **Uploads**: the server signs each Cloudinary upload for admins only, locked to one folder and to image formats. The API secret never reaches the browser.
 - **Headers**: Content-Security-Policy, HSTS, no framing, `nosniff`, a strict referrer policy and Permissions-Policy. Admin pages are `noindex` and never cached.
 - **Text** from the admin is shown as plain text (no HTML), so it can't inject scripts.

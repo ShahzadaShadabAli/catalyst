@@ -14,7 +14,8 @@ import {
   siteSchema,
   supporterSchema,
 } from "../src/lib/schemas";
-import { auth, db, projectId, usingEmulator } from "./_admin";
+import { hashPassword } from "../src/lib/password";
+import { db, projectId, upsertAdmin, usingEmulator } from "./_admin";
 
 const allowProduction = process.argv.includes("--production");
 if (!usingEmulator && !allowProduction) {
@@ -217,22 +218,14 @@ async function main() {
   await seedCollection("bankAccounts", banks.map((b, i) => bankSchema.parse({ ...b, order: i })));
   await seedCollection("supporters", supporters.map((s, i) => supporterSchema.parse({ ...s, order: i })));
 
-  // Test logins exist only in the local emulator.
+  // A test login exists only in the local emulator: username "admin", password from SEED_ADMIN_PASSWORD.
   if (usingEmulator) {
-    const email = process.env.SEED_ADMIN_EMAIL;
     const password = process.env.SEED_ADMIN_PASSWORD;
-    if (email && password) {
-      for (const [addr, isAdmin] of [
-        [email, true],
-        [email.replace("@", "+viewer@"), false],
-      ] as const) {
-        let user = await auth.getUserByEmail(addr).catch(() => null);
-        if (!user) user = await auth.createUser({ email: addr, password, emailVerified: true });
-        await auth.setCustomUserClaims(user.uid, isAdmin ? { admin: true } : {});
-        console.log(`✓ emulator login ${addr} (${isAdmin ? "admin" : "no admin rights"})`);
-      }
+    if (password) {
+      await upsertAdmin("admin", await hashPassword(password));
+      console.log('✓ emulator login "admin"');
     } else {
-      console.log("· SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD not set, no test logins created");
+      console.log("· SEED_ADMIN_PASSWORD not set, no test login created");
     }
   }
   console.log("Done. Remember: this is sample content — edit it from /admin.");

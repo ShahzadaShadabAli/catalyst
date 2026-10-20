@@ -17,7 +17,7 @@ const LINKS = [
   { href: "/admin/settings", label: "Site settings" },
 ];
 
-export function AdminNav({ email, newApps }: { email: string; newApps: number }) {
+export function AdminNav({ username, newApps }: { username: string; newApps: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -79,8 +79,8 @@ export function AdminNav({ email, newApps }: { email: string; newApps: number })
           <a href="/" target="_blank" rel="noopener" className="block py-1 text-paper/75 hover:text-paper">
             View website ↗
           </a>
-          <p className="mt-3 truncate text-paper/50" title={email}>
-            {email}
+          <p className="mt-3 truncate text-paper/50" title={username}>
+            Signed in as {username}
           </p>
           <button type="button" onClick={logout} disabled={busy} className="mt-2 text-paper/75 underline-offset-4 hover:text-paper hover:underline">
             {busy ? "Signing out…" : "Sign out"}

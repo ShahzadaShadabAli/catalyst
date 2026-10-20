@@ -1,33 +1,26 @@
 "use client";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { clientAuth } from "@/lib/firebase/client";
 
-const GENERIC = "Email or password is incorrect, or this account doesn't have admin access.";
+const GENERIC = "Username or password is incorrect.";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError("");
+    setBusy(true);
     try {
-      const auth = await clientAuth();
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-      const idToken = await cred.user.getIdToken(true);
       const res = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ username, password }),
       });
-      // The browser doesn't keep the Firebase login; the httpOnly cookie is the session.
-      await signOut(auth);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setError(body.error ?? GENERIC);
@@ -36,9 +29,8 @@ export function LoginForm() {
       setPassword("");
       router.replace("/admin");
       router.refresh();
-    } catch (err) {
-      const code = (err as { code?: string }).code;
-      setError(code === "auth/too-many-requests" ? "Too many attempts. Please wait a few minutes and try again." : GENERIC);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -47,10 +39,21 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
-        <label htmlFor="email" className="field-label">
-          Email
+        <label htmlFor="username" className="field-label">
+          Username
         </label>
-        <input id="email" type="email" autoComplete="username" required className="field" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input
+          id="username"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          maxLength={32}
+          className="field"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
       </div>
       <div>
         <label htmlFor="password" className="field-label">
@@ -71,7 +74,7 @@ export function LoginForm() {
           {error}
         </p>
       ) : null}
-      <button type="submit" className="btn btn-primary w-full" disabled={busy || !email || !password}>
+      <button type="submit" className="btn btn-primary w-full" disabled={busy || !username || !password}>
         {busy ? "Signing in…" : "Sign in"}
       </button>
     </form>

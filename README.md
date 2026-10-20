@@ -2,7 +2,7 @@
 
 Website and admin dashboard for **Catalyst Collective**, a teenage, women-led organisation in Skardu, Gilgit-Baltistan.
 
-**Stack:** Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · Motion + Lenis · Firebase Auth + Firestore (Admin SDK on the server) · Cloudinary · Zod
+**Stack:** Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · Motion + Lenis · Firestore (Admin SDK on the server) with its own username + password admin login · Cloudinary · Zod
 
 👉 **First time? Read [SETUP.md](SETUP.md).**
 
@@ -25,7 +25,8 @@ Hero · 01 Origin · 02 Mission · 03 Leadership tree · 04 Members · 05 Works 
 | `npm run build` / `npm start` | Production build / server |
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
 | `npm run test:rules` | Firestore security-rule tests |
-| `npm run set-admin -- email` | Grant admin (`--revoke` to remove) |
+| `npm run create-admin -- username` | Create an admin login (or reset its password) |
+| `npm run remove-admin -- username` | Remove an admin |
 
 ## Where things live
 
