@@ -1,10 +1,11 @@
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { Footer } from "@/components/site/Footer";
 import { Nav } from "@/components/site/Nav";
-import { getSite } from "@/lib/data";
+import { UpcomingPopup } from "@/components/site/UpcomingPopup";
+import { getSite, getUpcoming } from "@/lib/data";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const site = await getSite();
+  const [site, upcoming] = await Promise.all([getSite(), getUpcoming()]);
   return (
     <>
       <a
@@ -17,6 +18,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Nav />
       <main id="main">{children}</main>
       <Footer site={site} />
+      {upcoming.length ? <UpcomingPopup items={upcoming} /> : null}
       <div aria-hidden className="grain" />
     </>
   );

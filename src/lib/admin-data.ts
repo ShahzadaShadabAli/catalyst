@@ -12,13 +12,14 @@ import {
   type Member,
   type Note,
   type Supporter,
+  type Upcoming,
   type ApplicationStatus,
   type CollectionName,
 } from "./schemas";
 
 /* Fresh, uncached reads for the admin dashboard. Call only after requireAdminPage(). */
 
-type ItemOf = { leaders: Leader; members: Member; events: Event; notes: Note; bankAccounts: BankAccount; supporters: Supporter };
+type ItemOf = { leaders: Leader; members: Member; events: Event; notes: Note; bankAccounts: BankAccount; supporters: Supporter; upcoming: Upcoming };
 export const adminList = async <C extends CollectionName>(name: C): Promise<ItemOf[C][]> =>
   (await readCollection(name, collectionSchemas[name])) as unknown as ItemOf[C][];
 export const adminSite = readSite;

@@ -1,5 +1,5 @@
 "use client";
-import type { BankAccount, Event, Leader, Member, Note, Supporter } from "@/lib/schemas";
+import type { BankAccount, Event, Leader, Member, Note, Supporter, Upcoming } from "@/lib/schemas";
 import { emptyImage } from "@/lib/schemas";
 import { formatDate } from "@/lib/utils";
 import { CollectionManager } from "./CollectionManager";
@@ -287,6 +287,59 @@ export function SupportersManager({ items }: { items: Supporter[] }) {
       fields={supporterFields}
       blank={{ name: "", url: "", blurb: "", logo: emptyImage, order: 0 }}
       summary={(item) => ({ title: String(item.name), subtitle: String(item.blurb ?? ""), image: item.logo as Supporter["logo"] })}
+    />
+  );
+}
+
+/* ───────── Upcoming activity popup ───────── */
+
+const upcomingFields: FieldDef[] = [
+  { type: "text", name: "title", label: "Title", maxLength: 120, full: true, placeholder: "e.g. Catalyst × Yarnive Workshop" },
+  {
+    type: "textarea",
+    name: "description",
+    label: "Description",
+    hint: "When, where, what to bring…",
+    rows: 5,
+    maxLength: 700,
+    full: true,
+  },
+  { type: "date", name: "showFrom", label: "Show from", hint: "Leave empty to start now" },
+  { type: "date", name: "showUntil", label: "Show until", hint: "Last day it pops up" },
+  { type: "checkbox", name: "active", label: "Switched on", hint: "Untick to hide it early", full: true },
+  { type: "image", name: "image", label: "Picture / poster", full: true },
+];
+
+/** `today` is the date in Pakistan, worked out on the server, so the status labels stay pure. */
+function upcomingStatus(item: Record<string, unknown>, today: string) {
+  const from = String(item.showFrom ?? "");
+  const until = String(item.showUntil ?? "");
+  if (!item.active) return { label: "Off", tone: "muted" as const, text: "switched off" };
+  if (until < today) return { label: "Ended", tone: "muted" as const, text: `ended ${formatDate(until)}` };
+  if (from && from > today) return { label: "Scheduled", tone: "blush" as const, text: `${formatDate(from)} → ${formatDate(until)}` };
+  return { label: "Showing now", tone: "sage" as const, text: `until ${formatDate(until)}` };
+}
+
+export function UpcomingManager({ items, today }: { items: Upcoming[]; today: string }) {
+  const week = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+  return (
+    <CollectionManager
+      collection="upcoming"
+      title="Upcoming activity"
+      description="Pops up when someone opens the website, once per visit, until the end of the “Show until” day (Pakistan time). If several are showing at once, the top one wins."
+      singular="Activity"
+      items={rows(items)}
+      fields={upcomingFields}
+      blank={{ title: "", description: "", image: emptyImage, showFrom: "", showUntil: week, active: true, order: 0 }}
+      summary={(item) => {
+        const status = upcomingStatus(item, today);
+        return {
+          title: String(item.title),
+          subtitle: status.text,
+          image: item.image as Upcoming["image"],
+          badge: <Badge tone={status.tone}>{status.label}</Badge>,
+        };
+      }}
     />
   );
 }

@@ -25,7 +25,7 @@ afterAll(async () => {
   await env?.cleanup();
 });
 
-const collections = ["settings", "leaders", "members", "events", "notes", "bankAccounts", "supporters", "applications", "rateLimits", "admins", "adminSessions"];
+const collections = ["settings", "leaders", "members", "events", "notes", "bankAccounts", "supporters", "upcoming", "applications", "rateLimits", "admins", "adminSessions"];
 
 describe("firestore.rules", () => {
   it("visitors cannot read applications", async () => {

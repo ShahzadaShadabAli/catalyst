@@ -13,7 +13,7 @@ Hero · 01 Origin · 02 Mission · 03 Leadership tree · 04 Members · 05 Works 
 
 **Event pages** (`/works/[slug]`): the story, "What locals said" sticky notes, and a gallery of photos and YouTube videos with a lightbox.
 
-**Admin** (`/admin`, admins only): Applications inbox (filter, accept/reject, CSV export), Works, Leadership, Members, Leadership notes, Bank details, Supported by, Site settings.
+**Admin** (`/admin`, admins only): Applications inbox (filter, accept/reject, CSV export), Upcoming popup (an activity that pops up when the site opens, between the dates you pick), Works, Leadership, Members, Leadership notes, Bank details, Supported by, Site settings.
 
 ## Commands
 

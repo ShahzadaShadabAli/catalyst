@@ -146,6 +146,36 @@ export const supporterSchema = z.object({
   order,
 });
 
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
+
+/** The "coming up" popup visitors see when they open the website. */
+export const upcomingSchema = z
+  .object({
+    title: required(120, "Title"),
+    description: text(700).default(""),
+    image: imageSchema.default(emptyImage),
+    /** First day to show it. "" means straight away. */
+    showFrom: z.union([z.literal(""), day]).default(""),
+    /** Last day to show it (until the end of that day, Pakistan time). */
+    showUntil: day,
+    active: z.boolean().default(true),
+    order,
+  })
+  .refine((v) => v.showFrom === "" || v.showFrom <= v.showUntil, {
+    path: ["showUntil"],
+    message: "Must be on or after the start date",
+  });
+
+/** Skardu is UTC+5 all year (no daylight saving). */
+const PK_OFFSET_MS = 5 * 60 * 60 * 1000;
+/** Today's date in Pakistan, as YYYY-MM-DD. */
+export const pkToday = (now = Date.now()) => new Date(now + PK_OFFSET_MS).toISOString().slice(0, 10);
+/** Is this popup switched on and inside its date range right now (Pakistan time)? */
+export function isUpcomingLive(u: Pick<Upcoming, "active" | "showFrom" | "showUntil">, now = Date.now()): boolean {
+  const today = pkToday(now);
+  return u.active && today <= u.showUntil && (u.showFrom === "" || today >= u.showFrom);
+}
+
 export const siteSchema = z.object({
   hero: z
     .object({
@@ -195,6 +225,7 @@ export type Event = z.infer<typeof eventSchema> & { id: string };
 export type Note = z.infer<typeof noteSchema> & { id: string };
 export type BankAccount = z.infer<typeof bankSchema> & { id: string };
 export type Supporter = z.infer<typeof supporterSchema> & { id: string };
+export type Upcoming = z.infer<typeof upcomingSchema> & { id: string };
 export type Site = z.infer<typeof siteSchema>;
 
 /** Collections an admin can edit through the generic editor. */
@@ -205,6 +236,7 @@ export const collectionSchemas = {
   notes: noteSchema,
   bankAccounts: bankSchema,
   supporters: supporterSchema,
+  upcoming: upcomingSchema,
 } as const;
 export type CollectionName = keyof typeof collectionSchemas;
 export const collectionNames = Object.keys(collectionSchemas) as CollectionName[];

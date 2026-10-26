@@ -10,6 +10,8 @@ import {
   noteSchema,
   siteSchema,
   supporterSchema,
+  upcomingSchema,
+  pkToday,
   type BankAccount,
   type CollectionName,
   type Event,
@@ -18,6 +20,7 @@ import {
   type Note,
   type Site,
   type Supporter,
+  type Upcoming,
 } from "./schemas";
 
 /* Public, cached readers. Admin edits call updateTag(<collection>) to refresh them instantly. */
@@ -82,6 +85,16 @@ export const getBankAccounts = cachedRead<BankAccount[]>(
 export const getSupporters = cachedRead<Supporter[]>(
   "supporters",
   () => readCollection("supporters", supporterSchema),
+  () => [],
+);
+
+/** Switched-on popups that haven't ended yet. The browser re-checks the dates, since this is cached. */
+export const getUpcoming = cachedRead<Upcoming[]>(
+  "upcoming",
+  async () => {
+    const today = pkToday();
+    return (await readCollection("upcoming", upcomingSchema)).filter((u) => u.active && u.showUntil >= today);
+  },
   () => [],
 );
 
