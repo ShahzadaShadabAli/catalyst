@@ -60,19 +60,54 @@ export function Drawer({
   wide?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // Callers pass a new onClose on every render. Keep it in a ref so the setup below runs
+  // only when the drawer opens or closes, not on every keystroke (which used to steal focus).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return onCloseRef.current();
+      if (e.key !== "Tab" || !panelRef.current) return;
+      // Keep keyboard focus inside the drawer.
+      const focusable = [
+        ...panelRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => !el.hidden && el.offsetParent !== null);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     document.documentElement.style.overflow = "hidden";
-    window.setTimeout(() => panelRef.current?.querySelector<HTMLElement>("input,textarea,select,button")?.focus(), 50);
+    // Start in the first form field, not on the × button.
+    const t = window.setTimeout(() => {
+      const target =
+        bodyRef.current?.querySelector<HTMLElement>("input:not([type=hidden]),textarea,select") ??
+        bodyRef.current?.querySelector<HTMLElement>("button,a[href]") ??
+        panelRef.current;
+      target?.focus({ preventScroll: true });
+    }, 50);
     return () => {
+      window.clearTimeout(t);
       document.removeEventListener("keydown", onKey);
       document.documentElement.style.overflow = "";
-      prev?.focus();
+      prev?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -84,11 +119,12 @@ export function Drawer({
             role="dialog"
             aria-modal="true"
             aria-label={title}
+            tabIndex={-1}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 34 }}
-            className={cn("absolute inset-y-0 right-0 flex w-full flex-col bg-paper shadow-2xl", wide ? "max-w-3xl" : "max-w-xl")}
+            className={cn("absolute inset-y-0 right-0 flex w-full flex-col bg-paper shadow-2xl outline-none", wide ? "max-w-3xl" : "max-w-xl")}
           >
             <header className="flex items-center justify-between gap-4 border-b border-line bg-card px-5 py-4">
               <h2 className="font-display text-2xl text-ink">{title}</h2>
@@ -96,7 +132,9 @@ export function Drawer({
                 <CloseIcon />
               </button>
             </header>
-            <div className="flex-1 overflow-y-auto px-5 py-6">{children}</div>
+            <div ref={bodyRef} className="flex-1 overflow-y-auto px-5 py-6">
+              {children}
+            </div>
             {footer ? <footer className="border-t border-line bg-card px-5 py-4">{footer}</footer> : null}
           </motion.div>
         </div>
