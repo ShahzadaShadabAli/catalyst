@@ -32,13 +32,16 @@ if (!getApps().length) {
 export const db = getFirestore();
 export { projectId };
 
-/** Create an admin, or reset an existing admin's password (and sign them out everywhere). */
+/**
+ * Create an owner, or reset an existing admin's password (and sign them out everywhere).
+ * Resetting a password never changes someone's role.
+ */
 export async function upsertAdmin(username: string, passwordHash: string): Promise<"created" | "updated"> {
   const ref = db.collection("admins").doc(username);
   const existed = (await ref.get()).exists;
   const now = new Date();
   await ref.set(
-    existed ? { passwordHash, active: true, updatedAt: now } : { passwordHash, active: true, createdAt: now, updatedAt: now },
+    existed ? { passwordHash, active: true, updatedAt: now } : { passwordHash, active: true, role: "owner", createdBy: null, createdAt: now, updatedAt: now },
     { merge: true },
   );
   await deleteSessions(username);

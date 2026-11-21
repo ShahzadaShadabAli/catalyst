@@ -8,7 +8,7 @@ import { hashToken, newSessionToken } from "./password";
 
 /*
  * Admin logins live in our own Firestore tables:
- *   admins/{username}          → { passwordHash, active, createdAt, lastLoginAt }
+ *   admins/{username}          → { passwordHash, active, role, createdBy, createdAt, lastLoginAt }
  *   adminSessions/{tokenHash}  → { username, expiresAt, expireAt }
  * The browser holds a random token in an httpOnly cookie; we store only its hash.
  */
@@ -18,7 +18,15 @@ const isProd = process.env.NODE_ENV === "production";
 export const SESSION_COOKIE = isProd ? "__Host-cc_session" : "cc_session";
 export const SESSION_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
-export type AdminSession = { username: string };
+/**
+ * "owner": set up from the command line (npm run create-admin). Can add admins and remove the ones they added.
+ * "admin": added by an owner from the Admins page. Can edit content, but can't add or remove admins.
+ * Older records without a role were all made from the command line, so they count as owners.
+ */
+export type AdminRole = "owner" | "admin";
+export const roleOf = (value: unknown): AdminRole => (value === "admin" ? "admin" : "owner");
+
+export type AdminSession = { username: string; role: AdminRole };
 
 const cookieOptions = {
   httpOnly: true,
@@ -40,7 +48,7 @@ export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
     if (!s?.username || !s.expiresAt || s.expiresAt.toMillis() < Date.now()) return null;
     const admin = await db.collection("admins").doc(s.username).get();
     if (!admin.exists || admin.get("active") === false) return null;
-    return { username: s.username };
+    return { username: s.username, role: roleOf(admin.get("role")) };
   } catch {
     return null;
   }
@@ -78,6 +86,13 @@ export async function requireAdminPage(): Promise<AdminSession> {
 export async function requireAdmin(): Promise<AdminSession> {
   const session = await getAdminSession();
   if (!session) throw new UnauthorizedError();
+  return session;
+}
+
+/** For admin pages only owners may see. */
+export async function requireOwnerPage(): Promise<AdminSession> {
+  const session = await requireAdminPage();
+  if (session.role !== "owner") redirect("/admin");
   return session;
 }
 

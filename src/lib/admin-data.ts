@@ -1,5 +1,6 @@
 import "server-only";
 import type { Timestamp } from "firebase-admin/firestore";
+import { roleOf, type AdminRole } from "./auth";
 import { readCollection, readSite } from "./data";
 import { adminDb } from "./firebase/admin";
 import {
@@ -63,4 +64,27 @@ export async function adminCounts() {
     members: members.data().count,
     leaders: leaders.data().count,
   };
+}
+
+export type AdminUser = {
+  username: string;
+  role: AdminRole;
+  createdBy: string | null;
+  createdAt: string;
+  lastLoginAt: string;
+};
+
+/** Everyone who can sign in to the admin. Never includes password hashes. Owners only. */
+export async function adminUsers(): Promise<AdminUser[]> {
+  const snap = await adminDb().collection("admins").get();
+  const iso = (v: unknown) => (v && typeof (v as Timestamp).toDate === "function" ? (v as Timestamp).toDate().toISOString() : v instanceof Date ? v.toISOString() : "");
+  return snap.docs
+    .map((d) => ({
+      username: d.id,
+      role: roleOf(d.get("role")),
+      createdBy: typeof d.get("createdBy") === "string" ? (d.get("createdBy") as string) : null,
+      createdAt: iso(d.get("createdAt")),
+      lastLoginAt: iso(d.get("lastLoginAt")),
+    }))
+    .sort((a, b) => (a.role === b.role ? a.username.localeCompare(b.username) : a.role === "owner" ? -1 : 1));
 }

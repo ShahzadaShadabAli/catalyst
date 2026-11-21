@@ -16,9 +16,10 @@ const LINKS = [
   { href: "/admin/support", label: "Bank details" },
   { href: "/admin/supporters", label: "Supported by" },
   { href: "/admin/settings", label: "Site settings" },
+  { href: "/admin/admins", label: "Admins", ownerOnly: true },
 ];
 
-export function AdminNav({ username, newApps }: { username: string; newApps: number }) {
+export function AdminNav({ username, isOwner, newApps }: { username: string; isOwner: boolean; newApps: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -54,7 +55,7 @@ export function AdminNav({ username, newApps }: { username: string; newApps: num
       </div>
       <nav id="admin-nav" aria-label="Admin" className={cn("px-3 pb-4 lg:block", open ? "block" : "hidden")}>
         <ul className="space-y-0.5">
-          {LINKS.map((l) => {
+          {LINKS.filter((l) => isOwner || !("ownerOnly" in l)).map((l) => {
             const active = l.href === "/admin" ? pathname === "/admin" : pathname.startsWith(l.href);
             return (
               <li key={l.href}>
@@ -82,6 +83,7 @@ export function AdminNav({ username, newApps }: { username: string; newApps: num
           </a>
           <p className="mt-3 truncate text-paper/50" title={username}>
             Signed in as {username}
+            {isOwner ? " · owner" : ""}
           </p>
           <button type="button" onClick={logout} disabled={busy} className="mt-2 text-paper/75 underline-offset-4 hover:text-paper hover:underline">
             {busy ? "Signing out…" : "Sign out"}

@@ -108,6 +108,14 @@ npm run create-admin -- qarnia
 - **Forgot the password, or want to change it?** Do the same again. It replaces the password and signs that admin out everywhere.
 - **Remove someone:** `npm run remove-admin -- qarnia`
 
+### Owners and admins
+
+Logins made with `create-admin` are **owners**. An owner can open **Admins** in the dashboard to:
+- add an admin (username + password, then share them privately);
+- remove the admins **they** added. Removing someone signs them out straight away.
+
+Admins added this way can edit everything on the website, but they don't see the Admins page and can't add or remove anyone. An owner can't remove another owner or another owner's admins from the dashboard; use `npm run remove-admin` for that.
+
 ### Optional: start with the sample content
 
 ```bash
@@ -129,7 +137,7 @@ This only fills sections that are empty. Every sample item is marked "(sample)",
 
 ## How the security works (short version)
 
-- **Logins**: usernames and password hashes live in the `admins` table. Passwords are hashed with scrypt (salted, deliberately slow), never stored as plain text.
+- **Logins**: usernames, roles (owner or admin) and password hashes live in the `admins` table. Only owners can add admins, only the owner who added an admin can remove them, and the server checks this on every request. Passwords are hashed with scrypt (salted, deliberately slow), never stored as plain text.
 - **Sessions**: a successful login gets a random token in a 5-day `httpOnly`, `Secure`, `SameSite=Strict` cookie. The database stores only a hash of that token. Signing out deletes it. Changing a password or removing an admin ends all their sessions.
 - **Every admin page, save and upload** re-checks the session against the database. The `/admin` redirect in `src/proxy.ts` is only a first check.
 - **Login endpoint**: at most 10 tries per 15 minutes per visitor and 20 per username, same-origin requests only, the same generic error for a wrong username or a wrong password, and equal timing for both.

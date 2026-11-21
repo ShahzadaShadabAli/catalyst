@@ -1,5 +1,5 @@
 /**
- * Create an admin login, or reset its password:
+ * Create an owner login (can add and remove other admins from /admin/admins), or reset a password:
  *   npm run create-admin -- qarnia
  *
  * The password comes from ADMIN_PASSWORD in .env.local if it's there
@@ -61,7 +61,7 @@ async function main() {
   }
 
   const result = await upsertAdmin(username, await hashPassword(password));
-  console.log(`${result === "created" ? "Admin created" : "Password updated"}. Sign in at /admin with username "${username}".`);
+  console.log(`${result === "created" ? "Owner created" : "Password updated"}. Sign in at /admin with username "${username}".`);
   if (process.env.ADMIN_PASSWORD) console.log("Now delete the ADMIN_PASSWORD line from .env.local.");
 }
 
